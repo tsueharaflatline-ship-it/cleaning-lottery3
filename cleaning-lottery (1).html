@@ -3,1016 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>掃除当番くじ引き</title>
+    <title>掃除抽選 プロ仕様</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --accent: #007AFF;
+            --bg: #121212;
+            --input-bg: #252525;
+            --text: #ffffff;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', YuGothic, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
-            background-attachment: fixed;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Hiragino Sans", "Meiryo", sans-serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
+
+        @keyframes rumble {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(3px, 3px); }
+            50% { transform: translate(-3px, -3px); }
+            75% { transform: translate(3px, -3px); }
+            100% { transform: translate(0,0); }
         }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.15);
-            padding: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-        }
-
-        h1 {
-            text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 40px;
-            font-size: 2.5em;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-        }
-
-        .input-section {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
-            padding: 35px;
-            border-radius: 20px;
-            margin-bottom: 35px;
-            border: 1px solid rgba(102, 126, 234, 0.1);
-        }
-
-        .gender-group {
-            margin-bottom: 28px;
-        }
-
-        .gender-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .gender-group h3 {
-            color: #2d3748;
-            margin-bottom: 16px;
-            font-size: 1em;
-            font-weight: 600;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
-            opacity: 0.8;
-        }
-
-        .name-inputs {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        input[type="text"] {
-            padding: 14px 18px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 0.95em;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: white;
-            color: #2d3748;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            transform: translateY(-1px);
-        }
-
-        input[type="text"]::placeholder {
-            color: #a0aec0;
-        }
-
-        .button-container {
-            text-align: center;
-            margin: 35px 0;
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 16px 32px;
-            font-size: 1em;
-            font-weight: 600;
-            border-radius: 14px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            letter-spacing: 0.02em;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .results {
-            display: none;
-        }
-
-        .results.show {
-            display: block;
-            animation: fadeIn 0.5s;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .result-item {
-            background: white;
-            border: 1px solid #e2e8f0;
-            padding: 24px;
-            margin-bottom: 16px;
-            border-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .result-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 4px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .result-item:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        }
-
-        .duty-name {
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 1.15em;
-            margin-bottom: 10px;
-            letter-spacing: -0.01em;
-        }
-
-        .assigned-person {
-            color: #4a5568;
-            font-size: 1em;
-            padding-left: 8px;
-            font-weight: 500;
-        }
-
-        .error {
-            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
-            border: 1px solid #fc8181;
-            color: #742a2a;
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .info {
-            background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
-            border: 1px solid #90cdf4;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            border-radius: 12px;
-            font-size: 0.9em;
-            color: #2c5282;
-            font-weight: 500;
-        }
-
-        .lottery-animation {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000000;
-            z-index: 9999;
-            overflow: hidden;
-        }
-
-        .lottery-animation.active {
-            display: block;
-        }
-
-        .lottery-animation.reveal-space {
-            background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%);
-            transition: background 1.5s ease-in;
-        }
-
-        /* アニメーション中はスクロール禁止 */
-        body.lottery-active {
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
-        }
-
-        .stars {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-        }
-
-        .stars.appear {
-            animation: starsAppear 2s ease-in forwards;
-        }
-
-        @keyframes starsAppear {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 3s infinite;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
-        }
-
-        /* モバイルでは星を少し大きく */
-        @media (max-width: 767px) {
-            .star {
-                box-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
-            }
-        }
-
-        .shooting-star {
-            position: absolute;
-            height: 2px;
-            background: linear-gradient(90deg, #fff, transparent);
-            box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
-            opacity: 0;
-            will-change: transform, opacity;
-        }
-
-        .shooting-star.shoot {
-            animation: shootMobile 1.5s ease-out forwards;
-        }
-
-        @keyframes shootMobile {
-            0% {
-                transform: translate(0, 0);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            100% {
-                transform: translate(70vw, 40vh);
-                opacity: 0;
-            }
-        }
-
-        .big-shooting-star {
-            position: absolute;
-            height: 4px;
-            background: linear-gradient(90deg, #fff 0%, #667eea 50%, transparent);
-            box-shadow: 0 0 20px 4px rgba(255, 255, 255, 1),
-                        0 0 40px 8px rgba(102, 126, 234, 0.8);
-            opacity: 0;
-            will-change: transform, opacity;
-        }
-
-        .big-shooting-star.shoot {
-            animation: bigShootMobile 2s ease-out forwards;
-        }
-
-        @keyframes bigShootMobile {
-            0% {
-                transform: translate(0, 0) scale(1);
-                opacity: 0;
-            }
-            5% {
-                opacity: 1;
-            }
-            100% {
-                transform: translate(80vw, 50vh) scale(1.2);
-                opacity: 0;
-            }
-        }
-
-        /* PC用のアニメーション */
-        @media (min-width: 768px) {
-            .shooting-star.shoot {
-                animation: shootDesktop 1.5s ease-out forwards;
-            }
-
-            @keyframes shootDesktop {
-                0% {
-                    transform: translate(0, 0);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 1;
-                }
-                100% {
-                    transform: translate(600px, 350px);
-                    opacity: 0;
-                }
-            }
-
-            .big-shooting-star.shoot {
-                animation: bigShootDesktop 2s ease-out forwards;
-            }
-
-            @keyframes bigShootDesktop {
-                0% {
-                    transform: translate(0, 0) scale(1);
-                    opacity: 0;
-                }
-                5% {
-                    opacity: 1;
-                }
-                100% {
-                    transform: translate(900px, 500px) scale(1.5);
-                    opacity: 0;
-                }
-            }
-        }
-
-        .center-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 10;
-            opacity: 0;
-        }
-
-        .center-content.appear {
-            animation: contentAppear 1s ease-out 1s forwards;
-        }
-
-        @keyframes contentAppear {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.5);
-            }
-            100% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-        }
-
-        .lottery-box {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            width: 280px;
-            height: 280px;
-            margin: 0 auto 40px;
-            border-radius: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 7em;
-            animation: float 3s ease-in-out infinite;
-            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4),
-                        inset 0 0 40px rgba(255, 255, 255, 0.15);
-        }
-
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-25px);
-            }
-        }
-
-        .lottery-text {
-            color: white;
-            font-size: 3.5em;
-            font-weight: 800;
-            text-shadow: 0 0 30px rgba(255, 255, 255, 0.9),
-                         0 0 60px rgba(102, 126, 234, 0.7);
-            margin-bottom: 24px;
-            animation: glow 2s ease-in-out infinite;
-            letter-spacing: -0.02em;
-        }
-
-        @keyframes glow {
-            0%, 100% {
-                text-shadow: 0 0 30px rgba(255, 255, 255, 0.9),
-                             0 0 60px rgba(102, 126, 234, 0.7);
-            }
-            50% {
-                text-shadow: 0 0 40px rgba(255, 255, 255, 1),
-                             0 0 80px rgba(102, 126, 234, 0.9),
-                             0 0 100px rgba(102, 126, 234, 0.7);
-            }
-        }
-
-        .drumroll-text {
-            font-size: 2em;
-            color: rgba(255, 255, 255, 0.95);
-            font-weight: 400;
-            letter-spacing: 0.4em;
-            animation: pulse-text 0.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse-text {
-            0%, 100% { 
-                opacity: 0.7;
-                transform: scale(1);
-            }
-            50% { 
-                opacity: 1;
-                transform: scale(1.08);
-            }
-        }
-
-        .result-reveal {
-            animation: revealResult 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes revealResult {
-            0% {
-                opacity: 0;
-                transform: translateY(20px) scale(0.95);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        @media (max-width: 600px) {
-            body {
-                padding: 20px 12px;
-            }
-
-            .container {
-                padding: 30px 24px;
-            }
-
-            h1 {
-                font-size: 1.8em;
-            }
-
-            .name-inputs {
-                grid-template-columns: 1fr;
-            }
-
-            .lottery-box {
-                width: 200px;
-                height: 200px;
-                font-size: 5em;
-                border-radius: 24px;
-            }
-
-            .lottery-text {
-                font-size: 2.5em;
-            }
-
-            .drumroll-text {
-                font-size: 1.5em;
-                letter-spacing: 0.25em;
-            }
-
-            .button-container {
-                flex-direction: column;
-            }
-
-            button {
-                width: 100%;
-                padding: 14px 24px;
-                font-size: 0.95em;
-            }
-
-            .shooting-star,
-            .big-shooting-star {
-                height: 3px; /* モバイルでは流れ星を少し太く */
-            }
-        }
-
-        @media (min-width: 601px) and (max-width: 1024px) {
-            .lottery-box {
-                width: 240px;
-                height: 240px;
-                font-size: 6em;
-            }
-
-            .lottery-text {
-                font-size: 3em;
-            }
-        }
+        .rumbling { animation: rumble 0.1s infinite; }
+
+        .container { max-width: 500px; margin: 20px auto; padding: 30px 15px; background: #1e1e1e; border-radius: 16px; }
+        h1 { text-align: center; font-size: 22px; letter-spacing: 0.3em; margin-bottom: 20px; }
+
+        .day-selector { display: flex; gap: 10px; margin-bottom: 25px; }
+        .day-btn { flex: 1; padding: 12px; border: 1px solid #333; background: #252525; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .section-title { font-size: 11px; color: #888; margin-bottom: 10px; padding-left: 5px; }
+        .name-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 25px; }
+        input[type="text"] { width: 100%; background: var(--input-bg); border: 1px solid #333; color: #fff; padding: 10px; border-radius: 6px; font-size: 13px; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent); }
+
+        .btn-draw { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3); }
+
+        /* 演出レイヤー */
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        #shuffle-zone { font-size: 36px; font-weight: 900; color: var(--accent); text-shadow: 0 0 15px var(--accent); margin-top: 20px; }
+        #countdown-zone { font-size: 100px; font-weight: 900; color: #fff; margin-top: 10px; }
+        
+        /* 演出用画像（シャッフル） */
+        #shuffle-img { width: 180px; height: 180px; object-fit: cover; border-radius: 50%; border: 4px solid var(--accent); box-shadow: 0 0 30px var(--accent); }
+
+        /* 暗転・流れ星 */
+        #blackout { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; }
+        #cut-in-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.2); max-width: 95%; max-height: 95%; opacity: 0; transition: 0.2s; }
+        
+        .shooting-star { position: absolute; top: 15%; left: -20%; width: 250px; height: 2px; background: linear-gradient(90deg, #fff, transparent); transform: rotate(20deg); }
+        @keyframes shoot { 0% { left: -20%; top: 15%; opacity: 1; } 100% { left: 120%; top: 55%; opacity: 0; } }
+        .anim-shoot { animation: shoot 1s ease-out forwards; }
+
+        #results { margin-top: 30px; display: none; }
+        .result-item { background: #2a2a2a; padding: 12px 20px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--accent); animation: slideIn 0.3s ease forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .duty { color: var(--accent); font-weight: bold; font-size: 12px; }
+        .assigned { font-weight: 600; font-size: 15px; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>🧹 掃除当番くじ引き</h1>
+<body id="body">
 
-        <div class="info">
-            ℹ️ 男性1〜8人、女性1〜4人の名前を入力してください。余った人はランダムでトイレ以外の作業を2人体制にします。名前は自動保存されます。
+<div class="container">
+    <h1>掃除抽選</h1>
+
+    <div class="day-selector">
+        <button id="btn-mon" class="day-btn active" onclick="setDay('mon')">月曜日</button>
+        <button id="btn-thu" class="day-btn" onclick="setDay('thu')">木曜日</button>
+    </div>
+    
+    <div class="input-section">
+        <p class="section-title">男性メンバー</p>
+        <div class="name-inputs">
+            <input type="text" id="m1" placeholder="名前"> <input type="text" id="m2" placeholder="名前">
+            <input type="text" id="m3" placeholder="名前"> <input type="text" id="m4" placeholder="名前">
+            <input type="text" id="m5" placeholder="名前"> <input type="text" id="m6" placeholder="名前">
+            <input type="text" id="m7" placeholder="名前"> <input type="text" id="m8" placeholder="名前">
         </div>
 
-        <div class="input-section">
-            <div class="gender-group">
-                <h3>👨 男性メンバー(最大8人)</h3>
-                <div class="name-inputs">
-                    <input type="text" id="male1" placeholder="男性1">
-                    <input type="text" id="male2" placeholder="男性2">
-                    <input type="text" id="male3" placeholder="男性3">
-                    <input type="text" id="male4" placeholder="男性4">
-                    <input type="text" id="male5" placeholder="男性5">
-                    <input type="text" id="male6" placeholder="男性6">
-                    <input type="text" id="male7" placeholder="男性7">
-                    <input type="text" id="male8" placeholder="男性8">
-                </div>
-            </div>
-
-            <div class="gender-group">
-                <h3>👩 女性メンバー(最大4人)</h3>
-                <div class="name-inputs">
-                    <input type="text" id="female1" placeholder="女性1">
-                    <input type="text" id="female2" placeholder="女性2">
-                    <input type="text" id="female3" placeholder="女性3">
-                    <input type="text" id="female4" placeholder="女性4">
-                </div>
-            </div>
+        <p class="section-title">女性メンバー</p>
+        <div class="name-inputs">
+            <input type="text" id="f1" placeholder="名前"> <input type="text" id="f2" placeholder="名前">
+            <input type="text" id="f3" placeholder="名前"> <input type="text" id="f4" placeholder="名前">
         </div>
-
-        <div class="button-container">
-            <button id="lotteryButton" onclick="drawLots()">🎲 くじを引く</button>
-            <button onclick="saveNames()" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); margin-left: 10px;">💾 名前を保存</button>
-            <button onclick="clearNames()" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); margin-left: 10px;">🗑️ クリア</button>
-        </div>
-
-        <div id="lottery-animation" class="lottery-animation">
-            <div class="stars"></div>
-            <div class="center-content">
-                <div class="lottery-box">🎁</div>
-                <div class="lottery-text">抽選中...</div>
-                <div class="drumroll-text">★ ★ ★</div>
-            </div>
-        </div>
-
-        <div id="error-message"></div>
-        <div id="results" class="results"></div>
     </div>
 
-    <script>
-        // ページ読み込み時に保存された名前を読み込む
-        window.addEventListener('DOMContentLoaded', () => {
-            loadNames();
+    <button class="btn-draw" onclick="startMegaLottery()">抽選開始</button>
+    <div id="results"></div>
+</div>
+
+<div id="overlay">
+    <img id="shuffle-img" src="">
+    <div id="shuffle-zone">---</div>
+    <div id="countdown-zone"></div>
+</div>
+
+<div id="blackout">
+    <img id="cut-in-img" src="">
+    <div id="star" class="shooting-star"></div>
+</div>
+
+<script>
+    let currentDay = 'mon';
+    
+    // Googleドライブ直リンク用URL変換関数
+    const getDriveImg = (id) => `https://lh3.googleusercontent.com/u/0/d/${id}`;
+
+    // いただいた5枚の画像IDリスト
+    const imageIds = [
+        '1cNLLTuSI5Mlzbo0FfxyZdPc8QKTK6w28',
+        '10gRQVRag_ibx8EcYzp57st8grpAfWOLD',
+        '17ibh0usnV_JnS8yprU1omPI9_k3TH4Qq',
+        '1QJpwpl4mnAsViqu_WLWqCuVPM7NcQm_4',
+        '1il4uh2RabLSl-x9XnBev8nLHQBoW7r07'
+    ];
+
+    function setDay(day) {
+        currentDay = day;
+        document.getElementById('btn-mon').classList.toggle('active', day === 'mon');
+        document.getElementById('btn-thu').classList.toggle('active', day === 'thu');
+        document.getElementById('results').style.display = 'none';
+    }
+
+    window.onload = () => {
+        const d = JSON.parse(localStorage.getItem('mega_cleaning_v3') || '{}');
+        if(d.m) d.m.forEach((n,i)=>document.getElementById(`m${i+1}`).value=n);
+        if(d.f) d.f.forEach((n,i)=>document.getElementById(`f${i+1}`).value=n);
+    };
+
+    function startMegaLottery() {
+        const ms = [], fs = [];
+        for(let i=1;i<=8;i++){ const v=document.getElementById(`m${i}`).value; if(v) ms.push(v); }
+        for(let i=1;i<=4;i++){ const v=document.getElementById(`f${i}`).value; if(v) fs.push(v); }
+
+        if(ms.length < 1 || fs.length < 1) return alert("名前を入力してゾ");
+        localStorage.setItem('mega_cleaning_v3', JSON.stringify({m:ms, f:fs}));
+
+        const body = document.getElementById('body');
+        const overlay = document.getElementById('overlay');
+        const shuffleImg = document.getElementById('shuffle-img');
+        const shuffleZone = document.getElementById('shuffle-zone');
+        const countdownZone = document.getElementById('countdown-zone');
+        const blackout = document.getElementById('blackout');
+        const cutInImg = document.getElementById('cut-in-img');
+        const star = document.getElementById('star');
+        const resultsDiv = document.getElementById('results');
+
+        resultsDiv.style.display = 'none';
+        body.classList.add('rumbling');
+        overlay.style.display = 'flex';
+
+        // 1. 高速シャッフル演出（画像＋名前）
+        const allNames = [...ms, ...fs];
+        const shuffleInterval = setInterval(() => {
+            shuffleZone.textContent = allNames[Math.floor(Math.random() * allNames.length)];
+            shuffleImg.src = getDriveImg(imageIds[Math.floor(Math.random() * imageIds.length)]);
+        }, 60);
+
+        // 2. カウントダウン
+        let count = 3;
+        countdownZone.textContent = count;
+        const countInterval = setInterval(() => {
+            count--;
+            if(count > 0) {
+                countdownZone.textContent = count;
+            } else {
+                clearInterval(countInterval);
+                clearInterval(shuffleInterval);
+                
+                // 3. 暗転 & カットイン（溜め）
+                body.classList.remove('rumbling');
+                overlay.style.display = 'none';
+                blackout.style.display = 'block';
+                
+                // ランダムな1枚をカットインとして表示
+                cutInImg.src = getDriveImg(imageIds[Math.floor(Math.random() * imageIds.length)]);
+                setTimeout(() => {
+                    cutInImg.style.opacity = '1';
+                    cutInImg.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 50);
+
+                setTimeout(() => {
+                    // 4. カットイン消去 → 流れ星
+                    cutInImg.style.opacity = '0';
+                    setTimeout(() => {
+                        star.classList.add('anim-shoot');
+                        setTimeout(() => {
+                            blackout.style.display = 'none';
+                            star.classList.remove('anim-shoot');
+                            showResults(ms, fs);
+                        }, 1200);
+                    }, 200);
+                }, 1300); // カットイン表示時間
+            }
+        }, 1000);
+    }
+
+    function showResults(ms, fs) {
+        const resultsDiv = document.getElementById('results');
+        const assignments = runLogic(ms, fs);
+        resultsDiv.innerHTML = `<h3 style="text-align:center; margin:30px 0 15px; font-size:14px; color:#888;">${currentDay === 'mon' ? '月曜日' : '木曜日'}の結果</h3>`;
+        resultsDiv.style.display = 'block';
+
+        assignments.forEach((a, i) => {
+            setTimeout(() => {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.innerHTML = `<span class="duty">${a.duty}</span><span class="assigned">${a.people.join(' & ')}</span>`;
+                resultsDiv.appendChild(div);
+            }, i * 250);
         });
+        resultsDiv.scrollIntoView({behavior:'smooth'});
+    }
 
-        // 名前を自動保存
-        function autoSaveNames() {
-            const names = {
-                males: [],
-                females: []
-            };
+    function runLogic(m, f) {
+        const shuf = (a) => [...a].sort(()=>Math.random()-0.5);
+        let sm = shuf(m), sf = shuf(f);
+        let res = [];
 
-            for (let i = 1; i <= 8; i++) {
-                names.males.push(document.getElementById(`male${i}`).value.trim());
+        if (currentDay === 'mon') {
+            res.push({duty:'女子トイレ', people:[sf.pop()]});
+            res.push({duty:'男子トイレ', people:[sm.pop()]});
+            let rest = shuf([...sm, ...sf]);
+            const tasks = ['フロア', '会議室', '玄関', '可燃ゴミ', '資源ゴミ'];
+            tasks.forEach(t => { if(rest.length) res.push({duty:t, people:[rest.pop()]}); });
+            let i = 0;
+            while(rest.length) {
+                let targetIdx = (rest.length > 0) ? (res.length > 5 ? 5 : 2) : 2; 
+                res[targetIdx].people.push(rest.pop());
             }
-
-            for (let i = 1; i <= 4; i++) {
-                names.females.push(document.getElementById(`female${i}`).value.trim());
-            }
-
-            localStorage.setItem('cleaningLotteryNames', JSON.stringify(names));
-        }
-
-        // 名前を保存（手動）
-        function saveNames() {
-            autoSaveNames();
-            
-            // 保存完了のフィードバック
-            const button = event.target;
-            const originalText = button.innerHTML;
-            button.innerHTML = '✅ 保存しました！';
-            button.disabled = true;
-            
-            setTimeout(() => {
-                button.innerHTML = originalText;
-                button.disabled = false;
-            }, 2000);
-        }
-
-        // 保存された名前を読み込む
-        function loadNames() {
-            const saved = localStorage.getItem('cleaningLotteryNames');
-            if (saved) {
-                const names = JSON.parse(saved);
-                
-                for (let i = 1; i <= 8; i++) {
-                    if (names.males[i - 1]) {
-                        document.getElementById(`male${i}`).value = names.males[i - 1];
-                    }
-                }
-
-                for (let i = 1; i <= 4; i++) {
-                    if (names.females[i - 1]) {
-                        document.getElementById(`female${i}`).value = names.females[i - 1];
-                    }
-                }
-            }
-        }
-
-        // 名前をクリア
-        function clearNames() {
-            if (confirm('入力された名前を全てクリアしますか？')) {
-                for (let i = 1; i <= 8; i++) {
-                    document.getElementById(`male${i}`).value = '';
-                }
-
-                for (let i = 1; i <= 4; i++) {
-                    document.getElementById(`female${i}`).value = '';
-                }
-
-                localStorage.removeItem('cleaningLotteryNames');
-                
-                const errorDiv = document.getElementById('error-message');
-                errorDiv.innerHTML = '<div class="error" style="background: #d4edda; border-color: #c3e6cb; color: #155724;">✅ 名前をクリアしました</div>';
-                setTimeout(() => {
-                    errorDiv.innerHTML = '';
-                }, 2000);
-            }
-        }
-
-        function drawLots() {
-            // 入力値の取得
-            const males = [];
-            const females = [];
-
-            for (let i = 1; i <= 8; i++) {
-                const name = document.getElementById(`male${i}`).value.trim();
-                if (name) males.push(name);
-            }
-
-            for (let i = 1; i <= 4; i++) {
-                const name = document.getElementById(`female${i}`).value.trim();
-                if (name) females.push(name);
-            }
-
-            // バリデーション
-            const errorDiv = document.getElementById('error-message');
-            if (males.length < 1 || females.length < 1) {
-                errorDiv.innerHTML = '<div class="error">⚠️ 男性と女性それぞれ最低1人ずつ名前を入力してください。</div>';
-                document.getElementById('results').classList.remove('show');
-                return;
-            }
-
-            errorDiv.innerHTML = '';
-
-            // 名前を自動保存
-            autoSaveNames();
-
-            // ボタンを無効化
-            const button = document.getElementById('lotteryButton');
-            button.disabled = true;
-
-            // 結果を隠す
-            document.getElementById('results').classList.remove('show');
-
-            // 画面を一番上にスクロール
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // スクロール完了を待ってからアニメーション開始（スムーズに見せるため）
-            setTimeout(() => {
-                startLotteryAnimation(males, females, button);
-            }, 300);
-        }
-
-        function startLotteryAnimation(males, females, button) {
-            // アニメーション開始
-            const animationDiv = document.getElementById('lottery-animation');
-            const starsContainer = animationDiv.querySelector('.stars');
-            const centerContent = animationDiv.querySelector('.center-content');
-            
-            // 最初は真っ暗 & スクロール禁止
-            animationDiv.classList.add('active');
-            document.body.classList.add('lottery-active');
-
-            // 0.5秒後：最初の大きな流れ星がキラーン！
-            setTimeout(() => {
-                const bigStar = document.createElement('div');
-                bigStar.className = 'big-shooting-star';
-                bigStar.style.left = '10%';
-                bigStar.style.top = '15%';
-                const width = window.innerWidth < 768 ? 150 : 300;
-                bigStar.style.width = width + 'px';
-                animationDiv.appendChild(bigStar);
-                
-                setTimeout(() => {
-                    bigStar.classList.add('shoot');
-                }, 10);
-                
-                setTimeout(() => bigStar.remove(), 2100);
-            }, 500);
-
-            // 1秒後：宇宙空間が現れる
-            setTimeout(() => {
-                animationDiv.classList.add('reveal-space');
-            }, 1000);
-
-            // 1.2秒後：星が現れる
-            setTimeout(() => {
-                starsContainer.classList.add('appear');
-                createStaticStars(starsContainer);
-            }, 1200);
-
-            // 1.5秒後：流れ星が流れ始める
-            let starInterval;
-            setTimeout(() => {
-                starInterval = createShootingStars(animationDiv);
-            }, 1500);
-
-            // 2秒後：中央のコンテンツが現れる
-            setTimeout(() => {
-                centerContent.classList.add('appear');
-            }, 2000);
-
-            // カウントダウン開始（2.5秒後から）
-            let countdown = 3;
-            const lotteryText = centerContent.querySelector('.lottery-text');
-            const drumrollText = centerContent.querySelector('.drumroll-text');
-            
-            setTimeout(() => {
-                const countdownInterval = setInterval(() => {
-                    countdown--;
-                    if (countdown > 0) {
-                        lotteryText.textContent = `${countdown}`;
-                        drumrollText.textContent = '✦ '.repeat(countdown * 3);
-                    } else {
-                        clearInterval(countdownInterval);
-                        lotteryText.textContent = '発表！';
-                        drumrollText.textContent = '✨ ✨ ✨';
-                    }
-                }, 1000);
-            }, 2500);
-
-            // 5.5秒後に結果を表示
-            setTimeout(() => {
-                if (starInterval) clearInterval(starInterval);
-                performAssignment(males, females);
-                
-                // フェードアウト
-                animationDiv.style.animation = 'fadeOut 0.5s ease-out';
-                setTimeout(() => {
-                    animationDiv.classList.remove('active', 'reveal-space');
-                    animationDiv.style.animation = '';
-                    starsContainer.classList.remove('appear');
-                    centerContent.classList.remove('appear');
-                    starsContainer.innerHTML = '';
-                    
-                    // スクロール禁止を解除
-                    document.body.classList.remove('lottery-active');
-                    
-                    // 結果にスクロール（少し遅延させてスムーズに）
-                    setTimeout(() => {
-                        const resultsDiv = document.getElementById('results');
-                        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 100);
-                }, 500);
-                
-                button.disabled = false;
-            }, 5500);
-        }
-
-        function createStaticStars(container) {
-            // 静止している星を生成
-            const isMobile = window.innerWidth < 768;
-            const starCount = isMobile ? 80 : 120;
-            
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                
-                // モバイルでは星を少し大きく
-                const size = isMobile ? 
-                    Math.random() * 2 + 1.5 : 
-                    Math.random() * 2 + 1;
-                star.style.width = size + 'px';
-                star.style.height = size + 'px';
-                star.style.animationDelay = Math.random() * 3 + 's';
-                container.appendChild(star);
-            }
-        }
-
-        function createShootingStars(container) {
-            const isMobile = window.innerWidth < 768;
-            
-            const shootingStar = () => {
-                const star = document.createElement('div');
-                star.className = 'shooting-star';
-                
-                // 画面の左上〜中央あたりからスタート
-                star.style.left = Math.random() * 30 + '%';
-                star.style.top = Math.random() * 30 + '%';
-                
-                // サイズ調整
-                const width = isMobile ? 
-                    Math.random() * 60 + 60 : 
-                    Math.random() * 100 + 100;
-                star.style.width = width + 'px';
-                
-                container.appendChild(star);
-
-                setTimeout(() => {
-                    star.classList.add('shoot');
-                }, 10);
-
-                setTimeout(() => star.remove(), 1600);
-            };
-
-            // 流れ星を定期的に生成
-            const interval = setInterval(shootingStar, isMobile ? 500 : 400);
-            
-            // 最初に数個生成
-            const initialCount = isMobile ? 4 : 6;
-            for (let i = 0; i < initialCount; i++) {
-                setTimeout(shootingStar, i * 250);
-            }
-
-            return interval;
-        }
-
-        function performAssignment(males, females) {
-            // シャッフル関数
-            function shuffle(array) {
-                const shuffled = [...array];
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                }
-                return shuffled;
-            }
-
-            // 男性と女性をシャッフル
-            const shuffledMales = shuffle(males);
-            const shuffledFemales = shuffle(females);
-
-            // 割り当て
-            const assignments = [];
-            
-            // 必須の役割（トイレは性別固定）
-            let maleIndex = 0;
-            let femaleIndex = 0;
-
-            // 女子トイレ - 女性1人
-            assignments.push({
-                duty: '女子トイレ',
-                people: [shuffledFemales[femaleIndex++]]
-            });
-
-            // 男子トイレ - 男性1人
-            assignments.push({
-                duty: '男子トイレ',
-                people: [shuffledMales[maleIndex++]]
-            });
-
-            // 残りの人を混ぜる
-            const remainingPeople = [
-                ...shuffledMales.slice(maleIndex),
-                ...shuffledFemales.slice(femaleIndex)
-            ];
-            shuffle(remainingPeople);
-
-            // トイレ以外の作業リスト（ダブルにできる作業）
+        } else {
+            let wm = sf.pop(); let mm = sm.pop();
+            let rest = shuf([...sm, ...sf]);
             const tasks = [
-                { duty: 'フロア', people: [] },
-                { duty: '会議室神棚', people: [] },
-                { duty: '廊下・玄関・ウォーターサーバー', people: [] },
-                { duty: '可燃ゴミ', people: [] },
-                { duty: '資源ゴミ', people: [] }
+                {n:'可燃ゴミ・水やり', p:[]}, {n:'フロア', p:[]},
+                {n:'給湯室', p:[]}, {n:'廊下・玄関・WS', p:[]},
+                {n:'男子トイレ', p:[mm]}, {n:'女子トイレ', p:[wm]}
             ];
-
-            // 各作業に最低1人ずつ割り当て
-            for (let i = 0; i < tasks.length && i < remainingPeople.length; i++) {
-                tasks[i].people.push(remainingPeople[i]);
-            }
-
-            // 余った人をランダムな作業に追加
-            let extraPeopleIndex = tasks.length;
-            while (extraPeopleIndex < remainingPeople.length) {
-                // ランダムに作業を選ぶ
-                const randomTaskIndex = Math.floor(Math.random() * tasks.length);
-                tasks[randomTaskIndex].people.push(remainingPeople[extraPeopleIndex]);
-                extraPeopleIndex++;
-            }
-
-            // 可燃ゴミは最低2人にする（もし1人だけなら誰かを追加）
-            const burnable = tasks.find(t => t.duty === '可燃ゴミ');
-            if (burnable && burnable.people.length === 1) {
-                // 他の1人の作業から誰か移動
-                for (let task of tasks) {
-                    if (task.duty !== '可燃ゴミ' && task.people.length > 1) {
-                        const person = task.people.pop();
-                        burnable.people.push(person);
-                        break;
-                    }
-                }
-            }
-
-            // 結果に追加
-            assignments.push(...tasks);
-
-            // 結果表示（1つずつ表示）
-            displayResultsWithAnimation(assignments);
+            let taskIdx = 0;
+            while(rest.length) { tasks[taskIdx % 4].p.push(rest.pop()); taskIdx++; }
+            res = tasks.map(t => ({duty: t.n, people: t.p}));
         }
-
-        function displayResultsWithAnimation(assignments) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 28px; text-align: center; font-size: 1.8em; font-weight: 800; letter-spacing: -0.02em;">📋 割り当て結果</h2>';
-            resultsDiv.classList.add('show');
-
-            // 1つずつアニメーション付きで表示
-            assignments.forEach((assignment, index) => {
-                setTimeout(() => {
-                    const peopleList = assignment.people.join(' ・ ');
-                    const resultItem = document.createElement('div');
-                    resultItem.className = 'result-item result-reveal';
-                    resultItem.innerHTML = `
-                        <div class="duty-name">${assignment.duty}</div>
-                        <div class="assigned-person">👤 ${peopleList}</div>
-                    `;
-                    resultsDiv.appendChild(resultItem);
-
-                    // サウンド効果の代わりに視覚効果
-                    resultItem.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.3)';
-                    setTimeout(() => {
-                        resultItem.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)';
-                    }, 500);
-                }, index * 400);
-            });
-        }
-    </script>
+        return res;
+    }
+</script>
 </body>
 </html>
