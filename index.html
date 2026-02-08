@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>掃除抽選 プロ仕様</title>
+    <title>掃除抽選 - 極限演出</title>
     <style>
         :root {
             --accent: #007AFF;
@@ -18,40 +18,44 @@
         @keyframes rumble {
             0% { transform: translate(0,0); }
             25% { transform: translate(3px, 3px); }
-            50% { transform: translate(-3px, -3px); }
-            75% { transform: translate(3px, -3px); }
+            50% { transform: translate(-2px, -2px); }
+            75% { transform: translate(3px, -2px); }
             100% { transform: translate(0,0); }
         }
         .rumbling { animation: rumble 0.1s infinite; }
 
-        .container { max-width: 500px; margin: 20px auto; padding: 30px 15px; background: #1e1e1e; border-radius: 16px; }
+        .container { max-width: 500px; margin: 20px auto; padding: 30px 15px; background: #1e1e1e; border-radius: 16px; position: relative; z-index: 1; }
         h1 { text-align: center; font-size: 22px; letter-spacing: 0.3em; margin-bottom: 20px; }
 
         .day-selector { display: flex; gap: 10px; margin-bottom: 25px; }
-        .day-btn { flex: 1; padding: 12px; border: 1px solid #333; background: #252525; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .day-btn { flex: 1; padding: 12px; border: 1px solid #333; background: #252525; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
         .section-title { font-size: 11px; color: #888; margin-bottom: 10px; padding-left: 5px; }
         .name-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 25px; }
         input[type="text"] { width: 100%; background: var(--input-bg); border: 1px solid #333; color: #fff; padding: 10px; border-radius: 6px; font-size: 13px; outline: none; }
-        input[type="text"]:focus { border-color: var(--accent); }
 
         .btn-draw { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3); }
 
-        /* 演出レイヤー */
+        /* 演出オーバーレイ */
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        #shuffle-zone { font-size: 36px; font-weight: 900; color: var(--accent); text-shadow: 0 0 15px var(--accent); margin-top: 20px; }
-        #countdown-zone { font-size: 100px; font-weight: 900; color: #fff; margin-top: 10px; }
-        
-        /* 演出用画像（シャッフル） */
-        #shuffle-img { width: 180px; height: 180px; object-fit: cover; border-radius: 50%; border: 4px solid var(--accent); box-shadow: 0 0 30px var(--accent); }
+        #shuffle-img { width: 220px; height: 220px; object-fit: cover; border-radius: 50%; border: 4px solid var(--accent); box-shadow: 0 0 40px var(--accent); }
+        #shuffle-zone { font-size: 32px; font-weight: 900; color: var(--accent); text-shadow: 0 0 15px var(--accent); margin-top: 20px; height: 40px; }
+        #countdown-zone { font-size: 100px; font-weight: 900; color: #fff; }
 
-        /* 暗転・流れ星 */
+        /* 暗転・カットイン */
         #blackout { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; }
-        #cut-in-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.2); max-width: 95%; max-height: 95%; opacity: 0; transition: 0.2s; }
+        #cut-in-img { 
+            position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            max-width: 100%; max-height: 100%; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out; /* フェードアウト用 */
+        }
         
-        .shooting-star { position: absolute; top: 15%; left: -20%; width: 250px; height: 2px; background: linear-gradient(90deg, #fff, transparent); transform: rotate(20deg); }
-        @keyframes shoot { 0% { left: -20%; top: 15%; opacity: 1; } 100% { left: 120%; top: 55%; opacity: 0; } }
+        /* 流れ星 */
+        .shooting-star { position: absolute; top: 20%; left: -20%; width: 300px; height: 2px; background: linear-gradient(90deg, #fff, transparent); transform: rotate(20deg); opacity: 0; }
+        @keyframes shoot { 0% { left: -20%; top: 20%; opacity: 1; } 100% { left: 120%; top: 60%; opacity: 0; } }
         .anim-shoot { animation: shoot 1s ease-out forwards; }
 
         #results { margin-top: 30px; display: none; }
@@ -65,7 +69,6 @@
 
 <div class="container">
     <h1>掃除抽選</h1>
-
     <div class="day-selector">
         <button id="btn-mon" class="day-btn active" onclick="setDay('mon')">月曜日</button>
         <button id="btn-thu" class="day-btn" onclick="setDay('thu')">木曜日</button>
@@ -79,14 +82,12 @@
             <input type="text" id="m5" placeholder="名前"> <input type="text" id="m6" placeholder="名前">
             <input type="text" id="m7" placeholder="名前"> <input type="text" id="m8" placeholder="名前">
         </div>
-
         <p class="section-title">女性メンバー</p>
         <div class="name-inputs">
             <input type="text" id="f1" placeholder="名前"> <input type="text" id="f2" placeholder="名前">
             <input type="text" id="f3" placeholder="名前"> <input type="text" id="f4" placeholder="名前">
         </div>
     </div>
-
     <button class="btn-draw" onclick="startMegaLottery()">抽選開始</button>
     <div id="results"></div>
 </div>
@@ -104,17 +105,23 @@
 
 <script>
     let currentDay = 'mon';
-    
-    // Googleドライブ直リンク用URL変換関数
     const getDriveImg = (id) => `https://lh3.googleusercontent.com/u/0/d/${id}`;
 
-    // いただいた5枚の画像IDリスト
-    const imageIds = [
-        '1cNLLTuSI5Mlzbo0FfxyZdPc8QKTK6w28',
-        '10gRQVRag_ibx8EcYzp57st8grpAfWOLD',
-        '17ibh0usnV_JnS8yprU1omPI9_k3TH4Qq',
-        '1QJpwpl4mnAsViqu_WLWqCuVPM7NcQm_4',
-        '1il4uh2RabLSl-x9XnBev8nLHQBoW7r07'
+    // 【今回追加分】演出中にランダムで出る画像 (13枚)
+    const shuffleImageIds = [
+        '1Th70J3sN2YfN7v7HDiP2kS8DXx3LaTrT', '1dekTXYPaCNO-MQ0eHVNRUImi-HHRKOQb',
+        '1JTT_Bwwo0u8geVg9qE5uc0uVifCLs5g0', '1J7zGc1o2Qm_nu6wDmAd-I1z5rnYJDbc4',
+        '18MNE3RvORpNajWBHuou1oDZEG_yg4qiD', '1ikMAOfAxxOy4_12xKk2bLC_7KM_yyTkr',
+        '1IOxkX2X0srgi2cx5TZfPtmrkE29ruT4j', '1V0UT69KdU6spCp23U-E8ISYww4Kol0D-',
+        '1eDE_ewWi0CYvLjRgAWzG93BftsqgbALB', '1VFzi5DKDkUr8ePYNqJg1nPL2NRkmvyW-',
+        '1VKY2kY1cW-06j9X9yKL-GkenIn5cp5mo', '18dDnJh5O2qca4m5tgKiRvkogRLuQu3Gj',
+        '1Wi6yAhun7fzt2EntSdDKbiikn5MtdDvg'
+    ];
+
+    // 【最初のご提示分】最後にドカンと出る「決め絵」 (5枚)
+    const finalImageIds = [
+        '1cNLLTuSI5Mlzbo0FfxyZdPc8QKTK6w28', '10gRQVRag_ibx8EcYzp57st8grpAfWOLD',
+        '17ibh0usnV_JnS8yprU1omPI9_k3TH4Qq', '1QJpwpl4mnAsViqu_WLWqCuVPM7NcQm_4'
     ];
 
     function setDay(day) {
@@ -125,7 +132,7 @@
     }
 
     window.onload = () => {
-        const d = JSON.parse(localStorage.getItem('mega_cleaning_v3') || '{}');
+        const d = JSON.parse(localStorage.getItem('mega_cleaning_vfinal') || '{}');
         if(d.m) d.m.forEach((n,i)=>document.getElementById(`m${i+1}`).value=n);
         if(d.f) d.f.forEach((n,i)=>document.getElementById(`f${i+1}`).value=n);
     };
@@ -134,9 +141,8 @@
         const ms = [], fs = [];
         for(let i=1;i<=8;i++){ const v=document.getElementById(`m${i}`).value; if(v) ms.push(v); }
         for(let i=1;i<=4;i++){ const v=document.getElementById(`f${i}`).value; if(v) fs.push(v); }
-
         if(ms.length < 1 || fs.length < 1) return alert("名前を入力してゾ");
-        localStorage.setItem('mega_cleaning_v3', JSON.stringify({m:ms, f:fs}));
+        localStorage.setItem('mega_cleaning_vfinal', JSON.stringify({m:ms, f:fs}));
 
         const body = document.getElementById('body');
         const overlay = document.getElementById('overlay');
@@ -146,20 +152,18 @@
         const blackout = document.getElementById('blackout');
         const cutInImg = document.getElementById('cut-in-img');
         const star = document.getElementById('star');
-        const resultsDiv = document.getElementById('results');
 
-        resultsDiv.style.display = 'none';
+        document.getElementById('results').style.display = 'none';
         body.classList.add('rumbling');
         overlay.style.display = 'flex';
 
-        // 1. 高速シャッフル演出（画像＋名前）
+        // 1. シャッフル演出（今回追加の13枚を使用）
         const allNames = [...ms, ...fs];
         const shuffleInterval = setInterval(() => {
             shuffleZone.textContent = allNames[Math.floor(Math.random() * allNames.length)];
-            shuffleImg.src = getDriveImg(imageIds[Math.floor(Math.random() * imageIds.length)]);
-        }, 60);
+            shuffleImg.src = getDriveImg(shuffleImageIds[Math.floor(Math.random() * shuffleImageIds.length)]);
+        }, 50);
 
-        // 2. カウントダウン
         let count = 3;
         countdownZone.textContent = count;
         const countInterval = setInterval(() => {
@@ -170,30 +174,28 @@
                 clearInterval(countInterval);
                 clearInterval(shuffleInterval);
                 
-                // 3. 暗転 & カットイン（溜め）
+                // 2. 暗転 & 決め絵カットイン（最初のご提示5枚を使用）
                 body.classList.remove('rumbling');
                 overlay.style.display = 'none';
                 blackout.style.display = 'block';
                 
-                // ランダムな1枚をカットインとして表示
-                cutInImg.src = getDriveImg(imageIds[Math.floor(Math.random() * imageIds.length)]);
-                setTimeout(() => {
-                    cutInImg.style.opacity = '1';
-                    cutInImg.style.transform = 'translate(-50%, -50%) scale(1)';
-                }, 50);
+                cutInImg.src = getDriveImg(finalImageIds[Math.floor(Math.random() * finalImageIds.length)]);
+                setTimeout(() => { 
+                    cutInImg.style.opacity = '1'; 
+                }, 100);
 
+                // 3. フェードアウトして流れ星
                 setTimeout(() => {
-                    // 4. カットイン消去 → 流れ星
-                    cutInImg.style.opacity = '0';
+                    cutInImg.style.opacity = '0'; // 徐々に真っ暗へ
                     setTimeout(() => {
-                        star.classList.add('anim-shoot');
+                        star.classList.add('anim-shoot'); // 完全な闇に流れ星
                         setTimeout(() => {
                             blackout.style.display = 'none';
                             star.classList.remove('anim-shoot');
                             showResults(ms, fs);
                         }, 1200);
-                    }, 200);
-                }, 1300); // カットイン表示時間
+                    }, 800);
+                }, 2000); // 決め絵を表示している時間
             }
         }, 1000);
     }
@@ -203,7 +205,6 @@
         const assignments = runLogic(ms, fs);
         resultsDiv.innerHTML = `<h3 style="text-align:center; margin:30px 0 15px; font-size:14px; color:#888;">${currentDay === 'mon' ? '月曜日' : '木曜日'}の結果</h3>`;
         resultsDiv.style.display = 'block';
-
         assignments.forEach((a, i) => {
             setTimeout(() => {
                 const div = document.createElement('div');
@@ -219,16 +220,14 @@
         const shuf = (a) => [...a].sort(()=>Math.random()-0.5);
         let sm = shuf(m), sf = shuf(f);
         let res = [];
-
         if (currentDay === 'mon') {
             res.push({duty:'女子トイレ', people:[sf.pop()]});
             res.push({duty:'男子トイレ', people:[sm.pop()]});
             let rest = shuf([...sm, ...sf]);
             const tasks = ['フロア', '会議室', '玄関', '可燃ゴミ', '資源ゴミ'];
             tasks.forEach(t => { if(rest.length) res.push({duty:t, people:[rest.pop()]}); });
-            let i = 0;
             while(rest.length) {
-                let targetIdx = (rest.length > 0) ? (res.length > 5 ? 5 : 2) : 2; 
+                let targetIdx = (res.length > 5 ? 5 : 2);
                 res[targetIdx].people.push(rest.pop());
             }
         } else {
