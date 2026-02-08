@@ -1,82 +1,248 @@
-// 全画像をプリロード（読み込み済み）状態にするための配列
-let preloadedImages = [];
-
-function startMegaLottery() {
-    const ms = [], fs = [];
-    for(let i=1;i<=8;i++){ const v=document.getElementById(`m${i}`).value; if(v) ms.push(v); }
-    for(let i=1;i<=4;i++){ const v=document.getElementById(`f${i}`).value; if(v) fs.push(v); }
-    if(ms.length < 1 || fs.length < 1) return alert("名前を入力してゾ");
-
-    // --- 【修正ポイント1】全画像を事前に読み込ませてチラつきを防止 ---
-    [...shuffleImageIds, ...finalImageIds].forEach(id => {
-        const img = new Image();
-        img.src = getDriveImg(id);
-        preloadedImages.push(img);
-    });
-
-    const body = document.getElementById('body');
-    const overlay = document.getElementById('overlay');
-    const shuffleImg = document.getElementById('shuffle-img');
-    const shuffleZone = document.getElementById('shuffle-zone');
-    const countdownZone = document.getElementById('countdown-zone');
-    const blackout = document.getElementById('blackout');
-    const cutInImg = document.getElementById('cut-in-img');
-    const star = document.getElementById('star');
-
-    document.getElementById('results').style.display = 'none';
-    body.classList.add('rumbling');
-    overlay.style.display = 'flex';
-
-    const allNames = [...ms, ...fs];
-    
-    // --- 【修正ポイント2】乱数の偏りを抑えるロジックに変更 ---
-    let lastImgIndex = -1;
-    const shuffleInterval = setInterval(() => {
-        shuffleZone.textContent = allNames[Math.floor(Math.random() * allNames.length)];
-        
-        // 前回と同じ画像が連続で出にくいように制御
-        let nextImgIndex;
-        do {
-            nextImgIndex = Math.floor(Math.random() * shuffleImageIds.length);
-        } while (nextImgIndex === lastImgIndex);
-        
-        lastImgIndex = nextImgIndex;
-        shuffleImg.src = getDriveImg(shuffleImageIds[nextImgIndex]);
-    }, 60); // 速度が速すぎる場合はここを 80 くらいにすると安定します
-
-    let count = 3;
-    countdownZone.textContent = count;
-    const countInterval = setInterval(() => {
-        count--;
-        if(count > 0) {
-            countdownZone.textContent = count;
-        } else {
-            clearInterval(countInterval);
-            clearInterval(shuffleInterval);
-            
-            body.classList.remove('rumbling');
-            overlay.style.display = 'none';
-            blackout.style.display = 'block';
-            
-            // 決め絵もランダムに選択
-            const finalId = finalImageIds[Math.floor(Math.random() * finalImageIds.length)];
-            cutInImg.src = getDriveImg(finalId);
-            
-            setTimeout(() => { 
-                cutInImg.style.opacity = '1'; 
-            }, 100);
-
-            setTimeout(() => {
-                cutInImg.style.opacity = '0';
-                setTimeout(() => {
-                    star.classList.add('anim-shoot');
-                    setTimeout(() => {
-                        blackout.style.display = 'none';
-                        star.classList.remove('anim-shoot');
-                        showResults(ms, fs);
-                    }, 1200);
-                }, 800);
-            }, 2000);
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掃除抽選システム</title>
+    <style>
+        :root {
+            --accent: #007AFF;
+            --bg: #121212;
+            --input-bg: #252525;
+            --text: #ffffff;
         }
-    }, 1000);
-}
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Hiragino Sans", "Meiryo", sans-serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
+
+        @keyframes rumble {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(3px, 3px); }
+            50% { transform: translate(-3px, -3px); }
+            75% { transform: translate(3px, -3px); }
+            100% { transform: translate(0,0); }
+        }
+        .rumbling { animation: rumble 0.1s infinite; }
+
+        .container { max-width: 500px; margin: 20px auto; padding: 30px 15px; background: #1e1e1e; border-radius: 16px; position: relative; z-index: 1; }
+        h1 { text-align: center; font-size: 20px; letter-spacing: 0.2em; margin-bottom: 20px; }
+
+        .day-selector { display: flex; gap: 10px; margin-bottom: 25px; }
+        .day-btn { flex: 1; padding: 12px; border: 1px solid #333; background: #252525; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .section-title { font-size: 11px; color: #888; margin-bottom: 10px; padding-left: 5px; }
+        .name-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 25px; }
+        input[type="text"] { width: 100%; background: var(--input-bg); border: 1px solid #333; color: #fff; padding: 10px; border-radius: 6px; font-size: 14px; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent); }
+
+        .btn-draw { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3); }
+
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        #shuffle-img { width: 220px; height: 220px; object-fit: cover; border-radius: 50%; border: 4px solid var(--accent); box-shadow: 0 0 40px var(--accent); }
+        #shuffle-zone { font-size: 32px; font-weight: 900; color: var(--accent); text-shadow: 0 0 15px var(--accent); margin-top: 20px; height: 40px; }
+        #countdown-zone { font-size: 100px; font-weight: 900; color: #fff; }
+
+        #blackout { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; }
+        #cut-in-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; max-height: 100%; opacity: 0; transition: opacity 0.8s ease-in-out; }
+        
+        .shooting-star { position: absolute; top: 20%; left: -20%; width: 300px; height: 2px; background: linear-gradient(90deg, #fff, transparent); transform: rotate(20deg); opacity: 0; }
+        @keyframes shoot { 0% { left: -20%; top: 20%; opacity: 1; } 100% { left: 120%; top: 60%; opacity: 0; } }
+        .anim-shoot { animation: shoot 1.2s ease-out forwards; }
+
+        #results { margin-top: 30px; display: none; }
+        .result-item { background: #2a2a2a; padding: 12px 20px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--accent); animation: slideIn 0.3s ease forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .duty { color: var(--accent); font-weight: bold; font-size: 12px; }
+        .assigned { font-weight: 600; font-size: 15px; }
+    </style>
+</head>
+<body id="body">
+
+<div class="container">
+    <h1>掃除抽選</h1>
+    <div class="day-selector">
+        <button id="btn-mon" class="day-btn active" onclick="setDay('mon')">月曜日</button>
+        <button id="btn-thu" class="day-btn" onclick="setDay('thu')">木曜日</button>
+    </div>
+    
+    <div class="input-section">
+        <p class="section-title">男性メンバー</p>
+        <div class="name-inputs">
+            <input type="text" id="m1" placeholder="名前"> <input type="text" id="m2" placeholder="名前">
+            <input type="text" id="m3" placeholder="名前"> <input type="text" id="m4" placeholder="名前">
+            <input type="text" id="m5" placeholder="名前"> <input type="text" id="m6" placeholder="名前">
+            <input type="text" id="m7" placeholder="名前"> <input type="text" id="m8" placeholder="名前">
+        </div>
+        <p class="section-title">女性メンバー</p>
+        <div class="name-inputs">
+            <input type="text" id="f1" placeholder="名前"> <input type="text" id="f2" placeholder="名前">
+            <input type="text" id="f3" placeholder="名前"> <input type="text" id="f4" placeholder="名前">
+        </div>
+    </div>
+    <button class="btn-draw" onclick="startMegaLottery()">抽選開始</button>
+    <div id="results"></div>
+</div>
+
+<div id="overlay">
+    <img id="shuffle-img" src="">
+    <div id="shuffle-zone">---</div>
+    <div id="countdown-zone"></div>
+</div>
+
+<div id="blackout">
+    <img id="cut-in-img" src="">
+    <div id="star" class="shooting-star"></div>
+</div>
+
+<script>
+    let currentDay = 'mon';
+    const getDriveImg = (id) => `https://lh3.googleusercontent.com/u/0/d/${id}`;
+
+    const shuffleImageIds = [
+        '1Th70J3sN2YfN7v7HDiP2kS8DXx3LaTrT', '1dekTXYPaCNO-MQ0eHVNRUImi-HHRKOQb',
+        '1JTT_Bwwo0u8geVg9qE5uc0uVifCLs5g0', '1J7zGc1o2Qm_nu6wDmAd-I1z5rnYJDbc4',
+        '18MNE3RvORpNajWBHuou1oDZEG_yg4qiD', '1ikMAOfAxxOy4_12xKk2bLC_7KM_yyTkr',
+        '1IOxkX2X0srgi2cx5TZfPtmrkE29ruT4j', '1V0UT69KdU6spCp23U-E8ISYww4Kol0D-',
+        '1eDE_ewWi0CYvLjRgAWzG93BftsqgbALB', '1VFzi5DKDkUr8ePYNqJg1nPL2NRkmvyW-',
+        '1VKY2kY1cW-06j9X9yKL-GkenIn5cp5mo', '18dDnJh5O2qca4m5tgKiRvkogRLuQu3Gj',
+        '1Wi6yAhun7fzt2EntSdDKbiikn5MtdDvg'
+    ];
+
+    const finalImageIds = [
+        '1cNLLTuSI5Mlzbo0FfxyZdPc8QKTK6w28', '10gRQVRag_ibx8EcYzp57st8grpAfWOLD',
+        '17ibh0usnV_JnS8yprU1omPI9_k3TH4Qq', '1QJpwpl4mnAsViqu_WLWqCuVPM7NcQm_4',
+        '1il4uh2RabLSl-x9XnBev8nLHQBoW7r07'
+    ];
+
+    let preloadedImages = [];
+
+    function setDay(day) {
+        currentDay = day;
+        document.getElementById('btn-mon').classList.toggle('active', day === 'mon');
+        document.getElementById('btn-thu').classList.toggle('active', day === 'thu');
+        document.getElementById('results').style.display = 'none';
+    }
+
+    window.onload = () => {
+        const d = JSON.parse(localStorage.getItem('cleaning_config') || '{}');
+        if(d.m) d.m.forEach((n,i)=>document.getElementById(`m${i+1}`).value=n);
+        if(d.f) d.f.forEach((n,i)=>document.getElementById(`f${i+1}`).value=n);
+    };
+
+    function startMegaLottery() {
+        const ms = [], fs = [];
+        for(let i=1;i<=8;i++){ const v=document.getElementById(`m${i}`).value; if(v) ms.push(v); }
+        for(let i=1;i<=4;i++){ const v=document.getElementById(`f${i}`).value; if(v) fs.push(v); }
+        if(ms.length < 1 || fs.length < 1) return alert("名前を入力してください。");
+        localStorage.setItem('cleaning_config', JSON.stringify({m:ms, f:fs}));
+
+        // 画像のプリロード
+        [...shuffleImageIds, ...finalImageIds].forEach(id => {
+            const img = new Image();
+            img.src = getDriveImg(id);
+            preloadedImages.push(img);
+        });
+
+        const body = document.getElementById('body');
+        const overlay = document.getElementById('overlay');
+        const shuffleImg = document.getElementById('shuffle-img');
+        const shuffleZone = document.getElementById('shuffle-zone');
+        const countdownZone = document.getElementById('countdown-zone');
+        const blackout = document.getElementById('blackout');
+        const cutInImg = document.getElementById('cut-in-img');
+        const star = document.getElementById('star');
+
+        document.getElementById('results').style.display = 'none';
+        body.classList.add('rumbling');
+        overlay.style.display = 'flex';
+
+        const allNames = [...ms, ...fs];
+        let lastImgIdx = -1;
+
+        const shuffleInterval = setInterval(() => {
+            shuffleZone.textContent = allNames[Math.floor(Math.random() * allNames.length)];
+            let nextIdx;
+            do { nextIdx = Math.floor(Math.random() * shuffleImageIds.length); } while (nextIdx === lastImgIdx);
+            lastImgIdx = nextIdx;
+            shuffleImg.src = getDriveImg(shuffleImageIds[nextIdx]);
+        }, 60);
+
+        let count = 3;
+        countdownZone.textContent = count;
+        const countInterval = setInterval(() => {
+            count--;
+            if(count > 0) {
+                countdownZone.textContent = count;
+            } else {
+                clearInterval(countInterval);
+                clearInterval(shuffleInterval);
+                body.classList.remove('rumbling');
+                overlay.style.display = 'none';
+                blackout.style.display = 'block';
+                
+                cutInImg.src = getDriveImg(finalImageIds[Math.floor(Math.random() * finalImageIds.length)]);
+                setTimeout(() => { cutInImg.style.opacity = '1'; }, 100);
+
+                setTimeout(() => {
+                    cutInImg.style.opacity = '0'; // フェードアウト
+                    setTimeout(() => {
+                        star.classList.add('anim-shoot');
+                        setTimeout(() => {
+                            blackout.style.display = 'none';
+                            star.classList.remove('anim-shoot');
+                            showResults(ms, fs);
+                        }, 1200);
+                    }, 1000);
+                }, 2200);
+            }
+        }, 1000);
+    }
+
+    function showResults(ms, fs) {
+        const resultsDiv = document.getElementById('results');
+        const assignments = runLogic(ms, fs);
+        resultsDiv.innerHTML = `<h3 style="text-align:center; margin:30px 0 15px; font-size:14px; color:#888;">${currentDay === 'mon' ? '月曜日' : '木曜日'}の割り当て</h3>`;
+        resultsDiv.style.display = 'block';
+        assignments.forEach((a, i) => {
+            setTimeout(() => {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.innerHTML = `<span class="duty">${a.duty}</span><span class="assigned">${a.people.join(' & ')}</span>`;
+                resultsDiv.appendChild(div);
+            }, i * 250);
+        });
+        resultsDiv.scrollIntoView({behavior:'smooth'});
+    }
+
+    function runLogic(m, f) {
+        const shuf = (a) => [...a].sort(()=>Math.random()-0.5);
+        let sm = shuf(m), sf = shuf(f);
+        let res = [];
+        if (currentDay === 'mon') {
+            res.push({duty:'女子トイレ', people:[sf.pop()]});
+            res.push({duty:'男子トイレ', people:[sm.pop()]});
+            let rest = shuf([...sm, ...sf]);
+            const tasks = ['フロア', '会議室', '玄関', '可燃ゴミ', '資源ゴミ'];
+            tasks.forEach(t => { if(rest.length) res.push({duty:t, people:[rest.pop()]}); });
+            while(rest.length) {
+                let targetIdx = (res.length > 5 ? 5 : 2); // 可燃ゴミ優先、次にフロア
+                res[targetIdx].people.push(rest.pop());
+            }
+        } else {
+            let wm = sf.pop(); let mm = sm.pop();
+            let rest = shuf([...sm, ...sf]);
+            const tasks = [
+                {n:'可燃ゴミ・水やり', p:[]}, {n:'フロア', p:[]},
+                {n:'給湯室', p:[]}, {n:'廊下・玄関・WS', p:[]},
+                {n:'男子トイレ', p:[mm]}, {n:'女子トイレ', p:[wm]}
+            ];
+            let taskIdx = 0;
+            while(rest.length) { tasks[taskIdx % 4].p.push(rest.pop()); taskIdx++; }
+            res = tasks.map(t => ({duty: t.n, people: t.p}));
+        }
+        return res;
+    }
+</script>
+</body>
+</html>
